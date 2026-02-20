@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<section class="stats-grid">
+    <article class="card stat">
+        <h3>Customers</h3>
+        <p>{{ stats.customer_count }}</p>
+    </article>
+    <article class="card stat">
+        <h3>Products</h3>
+        <p>{{ stats.product_count }}</p>
+    </article>
+    <article class="card stat">
+        <h3>Invoices</h3>
+        <p>{{ stats.invoice_count }}</p>
+    </article>
+    <article class="card stat">
+        <h3>Pending Amount</h3>
+        <p>{{ '%.2f'|format(stats.pending_amount) }}</p>
+    </article>
+</section>
+
+<section class="card">
+    <h2>Recent Invoices</h2>
+    <table>
+        <thead>
+            <tr><th>No</th><th>Date</th><th>Customer</th><th>Total</th><th>Paid</th><th>Due</th></tr>
+        </thead>
+        <tbody>
+            {% for inv in recent_invoices %}
+                <tr>
+                    <td><a href="{{ url_for('invoice_view', invoice_id=inv.id) }}">{{ inv.invoice_no }}</a></td>
+                    <td>{{ inv.invoice_date }}</td>
+                    <td>{{ inv.customer_name }}</td>
+                    <td>{{ '%.2f'|format(inv.grand_total) }}</td>
+                    <td>{{ '%.2f'|format(inv.paid_amount) }}</td>
+                    <td>{{ '%.2f'|format(inv.grand_total - inv.paid_amount) }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="6">No invoices yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<section class="card">
+    <h2>Low Stock Alert</h2>
+    <table>
+        <thead><tr><th>Product</th><th>Brand</th><th>Stock</th></tr></thead>
+        <tbody>
+            {% for p in low_stock %}
+                <tr><td>{{ p.name }}</td><td>{{ p.brand }}</td><td>{{ p.stock }} {{ p.unit }}</td></tr>
+            {% else %}
+                <tr><td colspan="3">No low-stock products.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

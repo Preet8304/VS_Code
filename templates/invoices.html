@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Invoices{% endblock %}
+{% block content %}
+<section class="card">
+    <div class="row-between">
+        <h2>Invoices</h2>
+        <a class="btn" href="{{ url_for('invoice_new') }}">Create Invoice</a>
+    </div>
+    <table>
+        <thead>
+            <tr><th>No</th><th>Date</th><th>Customer</th><th>Total</th><th>Paid</th><th>Due</th><th></th></tr>
+        </thead>
+        <tbody>
+            {% for i in invoices %}
+                <tr>
+                    <td>{{ i.invoice_no }}</td>
+                    <td>{{ i.invoice_date }}</td>
+                    <td>{{ i.customer_name }}</td>
+                    <td>{{ '%.2f'|format(i.grand_total) }}</td>
+                    <td>{{ '%.2f'|format(i.paid_amount) }}</td>
+                    <td>{{ '%.2f'|format(i.grand_total - i.paid_amount) }}</td>
+                    <td><a href="{{ url_for('invoice_view', invoice_id=i.id) }}">View</a></td>
+                </tr>
+            {% else %}
+                <tr><td colspan="7">No invoices created.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

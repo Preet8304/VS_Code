@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}Invoice {{ invoice.invoice_no }}{% endblock %}
+{% block content %}
+<section class="card print-sheet">
+    <div class="row-between">
+        <div>
+            <h2>Tax Invoice</h2>
+            <p><strong>{{ invoice.invoice_no }}</strong></p>
+            <p>Date: {{ invoice.invoice_date }}</p>
+        </div>
+        <button onclick="window.print()">Print</button>
+    </div>
+
+    <div class="invoice-meta">
+        <div>
+            <h3>Bill To</h3>
+            <p>{{ invoice.customer_name }}</p>
+            <p>{{ invoice.mobile }}</p>
+            <p>GSTIN: {{ invoice.gstin }}</p>
+            <p>{{ invoice.address }}</p>
+        </div>
+        <div>
+            <h3>Payment</h3>
+            <p>Mode: {{ invoice.payment_mode }}</p>
+            <p>Paid: {{ '%.2f'|format(invoice.paid_amount) }}</p>
+            <p>Due: {{ '%.2f'|format(invoice.grand_total - invoice.paid_amount) }}</p>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr><th>Product</th><th>Qty</th><th>Rate</th><th>GST %</th><th>Total</th></tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+                <tr>
+                    <td>{{ item.product_name }} {{ item.brand }}</td>
+                    <td>{{ item.qty }} {{ item.unit }}</td>
+                    <td>{{ '%.2f'|format(item.rate) }}</td>
+                    <td>{{ '%.2f'|format(item.gst_percent) }}</td>
+                    <td>{{ '%.2f'|format(item.line_total) }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="summary right">
+        <p>Subtotal: {{ '%.2f'|format(invoice.subtotal) }}</p>
+        <p>GST: {{ '%.2f'|format(invoice.gst_total) }}</p>
+        <p>Loading: {{ '%.2f'|format(invoice.loading_charge) }}</p>
+        <p>Transport: {{ '%.2f'|format(invoice.transport_charge) }}</p>
+        <p>Discount: {{ '%.2f'|format(invoice.discount) }}</p>
+        <p><strong>Grand Total: {{ '%.2f'|format(invoice.grand_total) }}</strong></p>
+    </div>
+
+    {% if invoice.notes %}
+        <p><strong>Notes:</strong> {{ invoice.notes }}</p>
+    {% endif %}
+</section>
+{% endblock %}

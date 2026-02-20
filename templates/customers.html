@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Customers{% endblock %}
+{% block content %}
+<section class="card">
+    <h2>Add Customer</h2>
+    <form method="post" class="form-grid">
+        <label>Name <input name="name" required></label>
+        <label>Mobile <input name="mobile"></label>
+        <label>GSTIN <input name="gstin"></label>
+        <label class="wide">Address <input name="address"></label>
+        <button type="submit">Save Customer</button>
+    </form>
+</section>
+
+<section class="card">
+    <h2>Customer List</h2>
+    <table>
+        <thead><tr><th>Name</th><th>Mobile</th><th>GSTIN</th><th>Address</th></tr></thead>
+        <tbody>
+            {% for c in customers %}
+                <tr><td>{{ c.name }}</td><td>{{ c.mobile }}</td><td>{{ c.gstin }}</td><td>{{ c.address }}</td></tr>
+            {% else %}
+                <tr><td colspan="4">No customers added.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

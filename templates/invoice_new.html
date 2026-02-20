@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}Create Invoice{% endblock %}
+{% block content %}
+<section class="card">
+    <h2>Create Invoice</h2>
+    <form method="post" id="invoiceForm">
+        <div class="form-grid">
+            <label>Invoice No <input value="{{ suggested_invoice_no }}" disabled></label>
+            <label>Date <input type="date" name="invoice_date" value="{{ invoice_date }}"></label>
+            <label>Customer
+                <select name="customer_id" required>
+                    <option value="">Select customer</option>
+                    {% for c in customers %}
+                        <option value="{{ c.id }}">{{ c.name }}{% if c.mobile %} - {{ c.mobile }}{% endif %}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Payment Mode
+                <select name="payment_mode">
+                    <option>Cash</option>
+                    <option>UPI</option>
+                    <option>Bank Transfer</option>
+                    <option>Credit</option>
+                </select>
+            </label>
+        </div>
+
+        <h3>Items</h3>
+        <table id="itemsTable">
+            <thead>
+                <tr><th>Product</th><th>Qty</th><th>Rate</th><th>GST %</th><th>Line Total</th><th></th></tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <button type="button" id="addItemBtn">+ Add Item</button>
+
+        <div class="totals-grid">
+            <label>Loading Charge <input type="number" name="loading_charge" id="loading_charge" value="0" step="0.01"></label>
+            <label>Transport Charge <input type="number" name="transport_charge" id="transport_charge" value="0" step="0.01"></label>
+            <label>Discount <input type="number" name="discount" id="discount" value="0" step="0.01"></label>
+            <label>Paid Amount <input type="number" name="paid_amount" id="paid_amount" value="0" step="0.01"></label>
+            <label class="wide">Notes <input name="notes"></label>
+        </div>
+
+        <div class="summary card soft">
+            <p>Subtotal: <span id="subtotal">0.00</span></p>
+            <p>GST: <span id="gst_total">0.00</span></p>
+            <p>Grand Total: <span id="grand_total">0.00</span></p>
+        </div>
+
+        <input type="hidden" name="items_json" id="items_json">
+        <button type="submit">Save Invoice</button>
+    </form>
+</section>
+
+<script>
+    window.PRODUCTS = [
+        {% for p in products %}
+        {
+            id: {{ p.id }},
+            name: {{ (p.name ~ ' - ' ~ (p.brand or ''))|tojson }},
+            rate: {{ p.rate }},
+            gst_percent: {{ p.gst_percent }},
+            stock: {{ p.stock }}
+        },
+        {% endfor %}
+    ];
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/invoice_builder.js') }}"></script>
+{% endblock %}

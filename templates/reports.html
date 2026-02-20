@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<section class="card">
+    <h2>Daily Sales (Last 30 days with billing)</h2>
+    <table>
+        <thead><tr><th>Date</th><th>No. of Bills</th><th>Total Sales</th></tr></thead>
+        <tbody>
+            {% for s in sales_by_day %}
+                <tr><td>{{ s.invoice_date }}</td><td>{{ s.bills }}</td><td>{{ '%.2f'|format(s.total_sales) }}</td></tr>
+            {% else %}
+                <tr><td colspan="3">No data yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<section class="card">
+    <h2>Top Selling Products</h2>
+    <table>
+        <thead><tr><th>Product</th><th>Brand</th><th>Sold Qty</th></tr></thead>
+        <tbody>
+            {% for p in top_products %}
+                <tr><td>{{ p.name }}</td><td>{{ p.brand }}</td><td>{{ p.sold_qty }}</td></tr>
+            {% else %}
+                <tr><td colspan="3">No sales yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}
