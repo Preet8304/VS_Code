@@ -29,10 +29,13 @@ def resolve_db_path() -> Path:
 DB_PATH = resolve_db_path()
 try:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-except PermissionError:
+except OSError:
     # Fallback for environments where /var/data is not mounted yet.
     DB_PATH = FALLBACK_DB_PATH
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "change-me-in-production"
