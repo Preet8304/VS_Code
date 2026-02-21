@@ -14,8 +14,12 @@ DEFAULT_DB_PATH = BASE_DIR / "cement_billing.db"
 
 if os.getenv("NETLIFY"):
     DB_PATH = Path(os.getenv("DB_PATH", "/tmp/cement_billing.db"))
+elif os.getenv("RENDER"):
+    DB_PATH = Path(os.getenv("DB_PATH", "/var/data/cement_billing.db"))
 else:
     DB_PATH = Path(os.getenv("DB_PATH", str(DEFAULT_DB_PATH)))
+
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "change-me-in-production"

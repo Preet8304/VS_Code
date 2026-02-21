@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: cement-billing-web
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn wsgi:app
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.0
+      - key: RENDER
+        value: "true"
+      - key: DB_PATH
+        value: /var/data/cement_billing.db
+      - key: SECRET_KEY
+        generateValue: true
+    disk:
+      name: cement-billing-data
+      mountPath: /var/data
+      sizeGB: 1

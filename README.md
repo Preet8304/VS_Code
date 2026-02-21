@@ -26,26 +26,34 @@ python app.py
 
 Open: `http://127.0.0.1:5000`
 
-## Deploy on Netlify
+## Deploy on Render
 
-Files added for Netlify:
+Files added for Render:
 
-- `netlify.toml`
-- `netlify/functions/app.py`
+- `render.yaml`
+- `wsgi.py`
+- `Procfile`
 
 Steps:
 
 1. Push this repo to GitHub.
-2. In Netlify, create a new site from that repo.
-3. Build command: `pip install -r requirements.txt`
-4. Publish directory: leave empty (functions-driven app).
-5. Set environment variable:
-   - `NETLIFY=true`
-   - optional: `DB_PATH=/tmp/cement_billing.db`
+2. In Render, create a new Blueprint (recommended) or Web Service from this repo.
+3. Render picks `render.yaml` automatically, including:
+   - Build command: `pip install -r requirements.txt`
+   - Start command: `gunicorn wsgi:app`
+   - Persistent disk mounted at `/var/data`
+4. App DB path is configured via:
+   - `RENDER=true`
+   - `DB_PATH=/var/data/cement_billing.db`
 
 Important:
-- SQLite on Netlify function storage is temporary (`/tmp`), so data may reset.
-- For production, move data to a persistent DB (Postgres, Supabase, Neon, etc.).
+- If you skip disk setup, SQLite data will be temporary and may reset on deploy/restart.
+- For scale and multi-instance use, migrate to Postgres.
+
+## Netlify Files (Optional)
+
+- `netlify.toml`
+- `netlify/functions/app.py`
 
 ## Next upgrades for production
 
