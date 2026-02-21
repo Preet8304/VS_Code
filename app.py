@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+import tempfile
 from datetime import date, datetime
 from pathlib import Path
 
@@ -11,15 +12,27 @@ from flask import Flask, flash, g, redirect, render_template, request, url_for
 
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_DB_PATH = BASE_DIR / "cement_billing.db"
+FALLBACK_DB_PATH = Path(tempfile.gettempdir()) / "cement_billing.db"
 
-if os.getenv("NETLIFY"):
-    DB_PATH = Path(os.getenv("DB_PATH", "/tmp/cement_billing.db"))
-elif os.getenv("RENDER"):
-    DB_PATH = Path(os.getenv("DB_PATH", "/tmp/cement_billing.db"))
-else:
-    DB_PATH = Path("/tmp/cement_billing.db")
 
-DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+def resolve_db_path() -> Path:
+    configured = os.getenv("DB_PATH")
+    if configured:
+        return Path(configured)
+    if os.getenv("NETLIFY"):
+        return FALLBACK_DB_PATH
+    if os.getenv("RENDER"):
+        return Path("/var/data/cement_billing.db")
+    return DEFAULT_DB_PATH
+
+
+DB_PATH = resolve_db_path()
+try:
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+except PermissionError:
+    # Fallback for environments where /var/data is not mounted yet.
+    DB_PATH = FALLBACK_DB_PATH
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "change-me-in-production"
@@ -27,7 +40,13 @@ app.config["SECRET_KEY"] = "change-me-in-production"
 
 def get_db() -> sqlite3.Connection:
     if "db" not in g:
-        g.db = sqlite3.connect(DB_PATH)
+        global DB_PATH
+        try:
+            g.db = sqlite3.connect(DB_PATH)
+        except sqlite3.OperationalError:
+            DB_PATH = FALLBACK_DB_PATH
+            DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+            g.db = sqlite3.connect(DB_PATH)
         g.db.row_factory = sqlite3.Row
     return g.db
 
