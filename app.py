@@ -17,7 +17,7 @@ if os.getenv("NETLIFY"):
 elif os.getenv("RENDER"):
     DB_PATH = Path(os.getenv("DB_PATH", "/var/data/cement_billing.db"))
 else:
-    DB_PATH = Path(os.getenv("DB_PATH", str(DEFAULT_DB_PATH)))
+    DB_PATH = Path("/tmp/cement_billing.db")
 
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
