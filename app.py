@@ -15,7 +15,7 @@ DEFAULT_DB_PATH = BASE_DIR / "cement_billing.db"
 if os.getenv("NETLIFY"):
     DB_PATH = Path(os.getenv("DB_PATH", "/tmp/cement_billing.db"))
 elif os.getenv("RENDER"):
-    DB_PATH = Path(os.getenv("DB_PATH", "/var/data/cement_billing.db"))
+    DB_PATH = Path(os.getenv("DB_PATH", "/tmp/cement_billing.db"))
 else:
     DB_PATH = Path("/tmp/cement_billing.db")
 
