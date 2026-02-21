@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from datetime import date, datetime
 from pathlib import Path
@@ -9,7 +10,12 @@ from flask import Flask, flash, g, redirect, render_template, request, url_for
 
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = BASE_DIR / "cement_billing.db"
+DEFAULT_DB_PATH = BASE_DIR / "cement_billing.db"
+
+if os.getenv("NETLIFY"):
+    DB_PATH = Path(os.getenv("DB_PATH", "/tmp/cement_billing.db"))
+else:
+    DB_PATH = Path(os.getenv("DB_PATH", str(DEFAULT_DB_PATH)))
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "change-me-in-production"
@@ -360,7 +366,9 @@ def inject_now() -> dict[str, str]:
     return {"today": date.today().isoformat()}
 
 
+with app.app_context():
+    init_db()
+
+
 if __name__ == "__main__":
-    with app.app_context():
-        init_db()
     app.run(debug=True)

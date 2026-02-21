@@ -26,6 +26,27 @@ python app.py
 
 Open: `http://127.0.0.1:5000`
 
+## Deploy on Netlify
+
+Files added for Netlify:
+
+- `netlify.toml`
+- `netlify/functions/app.py`
+
+Steps:
+
+1. Push this repo to GitHub.
+2. In Netlify, create a new site from that repo.
+3. Build command: `pip install -r requirements.txt`
+4. Publish directory: leave empty (functions-driven app).
+5. Set environment variable:
+   - `NETLIFY=true`
+   - optional: `DB_PATH=/tmp/cement_billing.db`
+
+Important:
+- SQLite on Netlify function storage is temporary (`/tmp`), so data may reset.
+- For production, move data to a persistent DB (Postgres, Supabase, Neon, etc.).
+
 ## Next upgrades for production
 
 - Login and role-based access
