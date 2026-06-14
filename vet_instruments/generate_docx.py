@@ -286,20 +286,26 @@ def main():
 
     all_categories = dict(CAT1)
 
-    # Load optional parts if they exist
     try:
         from content_data_part2 import CATEGORIES_PART2
         all_categories.update(CATEGORIES_PART2)
-        print(f'Loaded part2: {list(CATEGORIES_PART2.keys())}')
+        print(f'Loaded part2: {len(CATEGORIES_PART2)} categories')
     except ImportError:
-        print('content_data_part2.py not ready yet')
+        print('content_data_part2.py not found')
 
     try:
-        from content_data_part3 import CATEGORIES_PART3
-        all_categories.update(CATEGORIES_PART3)
-        print(f'Loaded part3: {list(CATEGORIES_PART3.keys())}')
+        from content_data_part3a import CATEGORIES_PART3A
+        all_categories.update(CATEGORIES_PART3A)
+        print(f'Loaded part3a: {len(CATEGORIES_PART3A)} categories')
     except ImportError:
-        print('content_data_part3.py not ready yet')
+        print('content_data_part3a.py not found')
+
+    try:
+        from content_data_part3b import CATEGORIES_PART3B
+        all_categories.update(CATEGORIES_PART3B)
+        print(f'Loaded part3b: {len(CATEGORIES_PART3B)} categories')
+    except ImportError:
+        print('content_data_part3b.py not found')
 
     print(f'\nGenerating {len(all_categories)} category DOCX files...\n')
     for cat_key, cat_data in all_categories.items():
