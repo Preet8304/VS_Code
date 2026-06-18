@@ -3,3 +3,4 @@ __pycache__/
 cement_billing.db
 *.db
 .venv/
+xauusd_scalping/data/*.csv
