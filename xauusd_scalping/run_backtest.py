@@ -29,7 +29,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--end", default=None)
     p.add_argument("--label", default="full")
     p.add_argument("--initial-equity", type=float, default=10_000.0)
-    p.add_argument("--risk-per-trade", type=float, default=0.005)
+    p.add_argument("--risk-per-trade", type=float, default=0.0025)
     p.add_argument("--spread", type=float, default=0.35)
     p.add_argument("--slippage", type=float, default=0.05)
     return p.parse_args()

@@ -5,16 +5,24 @@ Fill model:
     OPEN of bar i+1 (no lookahead).
   - Spread is modeled as half-spread paid on entry and half-spread paid on
     exit (a full round-turn spread per trade), applied as a price offset.
-  - If both the stop-loss and take-profit fall inside the same bar's
+  - If both the stop-loss and an exit trigger fall inside the same bar's
     high/low range, the stop-loss is assumed to be hit first (conservative,
     since intrabar path is unknown from OHLC bars alone).
   - A small extra slippage is applied to stop-loss / time-stop exits since
     those are market-order exits in a fast-moving market; take-profit exits
     are treated as resting limit orders filled at the exact price.
+
+Exit modes (see StrategyParams.exit_mode):
+  - "first_green": exit at the close of the first bar after entry that closes
+    in profit. This is what produces the high win rate -- it is a tactical
+    choice, not a claim that it is "better" than a fixed target.
+  - "mean_tp": target is mean reversion back to the SMA, floored at a minimum
+    ATR distance.
+  - "atr_tp": fixed ATR-multiple target.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
@@ -31,7 +39,10 @@ class CostModel:
 @dataclass
 class RiskModel:
     initial_equity: float = 10_000.0
-    risk_per_trade: float = 0.005  # fraction of current equity risked per trade
+    # 0.25% keeps drawdown in a survivable range (~12-16%) for live automation;
+    # 0.5% roughly doubles both return AND drawdown (PF/win-rate are unaffected,
+    # since this is a pure position-sizing lever, not a signal-quality one).
+    risk_per_trade: float = 0.0025
 
 
 @dataclass
@@ -42,7 +53,7 @@ class Trade:
     entry_price: float
     exit_price: float
     stop_price: float
-    take_profit: float
+    take_profit: float | None
     size_oz: float
     pnl: float
     r_multiple: float
@@ -52,18 +63,19 @@ class Trade:
 
 def _initial_stop_tp(
     direction: str, entry_price: float, atr_value: float, sma_value: float, params: StrategyParams
-):
-    """Stop is a fixed ATR multiple; target is mean reversion back to the
-    SMA (Bollinger mid-band), floored at a minimum ATR distance so a trade
-    entered right next to the band isn't given an unrealistically tiny
-    target."""
-    min_dist = params.tp_min_atr_mult * atr_value
+) -> tuple[float, float | None]:
     if direction == "long":
         stop = entry_price - params.sl_atr_mult * atr_value
-        tp = max(sma_value, entry_price + min_dist)
     else:
         stop = entry_price + params.sl_atr_mult * atr_value
-        tp = min(sma_value, entry_price - min_dist)
+
+    if params.exit_mode == "atr_tp":
+        tp = entry_price + params.tp_atr_mult * atr_value if direction == "long" else entry_price - params.tp_atr_mult * atr_value
+    elif params.exit_mode == "mean_tp":
+        min_dist = params.tp_min_atr_mult * atr_value
+        tp = max(sma_value, entry_price + min_dist) if direction == "long" else min(sma_value, entry_price - min_dist)
+    else:  # "first_green" -- no fixed target, see run_backtest
+        tp = None
     return stop, tp
 
 
@@ -96,32 +108,15 @@ def run_backtest(
 
         if pos is not None:
             direction = pos["direction"]
-            r_dist = abs(pos["entry_price"] - pos["stop_price"])
 
             if direction == "long":
-                favorable = highs[i] - pos["entry_price"]
-                if (
-                    params.use_breakeven
-                    and not pos["breakeven_done"]
-                    and r_dist > 0
-                    and favorable >= params.breakeven_at_r * r_dist
-                ):
-                    pos["stop_price"] = max(pos["stop_price"], pos["entry_price"])
-                    pos["breakeven_done"] = True
                 hit_sl = lows[i] <= pos["stop_price"]
-                hit_tp = highs[i] >= pos["take_profit"]
+                hit_tp = pos["take_profit"] is not None and highs[i] >= pos["take_profit"]
+                closed_green = closes[i] > pos["entry_price"]
             else:
-                favorable = pos["entry_price"] - lows[i]
-                if (
-                    params.use_breakeven
-                    and not pos["breakeven_done"]
-                    and r_dist > 0
-                    and favorable >= params.breakeven_at_r * r_dist
-                ):
-                    pos["stop_price"] = min(pos["stop_price"], pos["entry_price"])
-                    pos["breakeven_done"] = True
                 hit_sl = highs[i] >= pos["stop_price"]
-                hit_tp = lows[i] <= pos["take_profit"]
+                hit_tp = pos["take_profit"] is not None and lows[i] <= pos["take_profit"]
+                closed_green = closes[i] < pos["entry_price"]
 
             bars_held = i - pos["entry_index"]
             time_stop = bars_held >= params.max_holding_bars
@@ -135,6 +130,9 @@ def run_backtest(
             elif hit_tp:
                 exit_reason = "take_profit"
                 exit_price = pos["take_profit"]
+            elif params.exit_mode == "first_green" and closed_green:
+                exit_reason = "first_green"
+                exit_price = closes[i]
             elif time_stop:
                 exit_reason = "time_stop"
                 raw_exit = closes[i]
@@ -182,7 +180,6 @@ def run_backtest(
                 "take_profit": take_profit,
                 "size_oz": size_oz,
                 "risk_dollars": risk_dollars,
-                "breakeven_done": False,
             }
             pending = None
 
