@@ -149,66 +149,87 @@ the cost requirement from §5; both need the same tight/ECN-grade spread to be
 net positive, because that requirement comes from the entry signal's raw
 edge size, not from the exit.
 
-## 9. Time-of-day as a second, independent edge component
+## 9. Time-of-day as a second, independent edge component (corrected)
 
 Everything above treats the entry signal as if it applies uniformly across
-the trading day. It does not. A direct follow-up request asked for a higher
-profit factor than the §6-7 system delivers (1.08-1.10) — at least ~1.5. The
-exit-geometry lever alone (SL/TP ATR-multiple ratio) was re-tested first,
-since it was the cheapest thing to try: a grid over stop multiples 0.5-1.2x
-and target multiples 1.5-5.0x, holding the existing 07:00-16:00 session fixed,
-caps out-of-sample profit factor at **~1.14-1.16** — real, but short of the
-target, and pushing the target multiple further just shifts trades into the
-12-bar time-stop without raising PF, because §3-5 already established the
-entry signal's raw edge size is the limiting factor, not the exit ratio.
+the trading day. It does not. This section originally reported a profit
+factor of 1.60 in-sample / 1.51 out-of-sample for a 14:00-16:00 window with a
+0.5x/4.0x ATR exit, found by an exhaustive scan of every
+`(session_start_hour, session_end_hour)` pair ranked by `min(IS_PF, OOS_PF)`.
+**That ranking criterion is a selection-bias flaw**: sorting thousands of
+candidates by how well they score on the out-of-sample window, and keeping
+the one that scores best there, uses the out-of-sample data to choose the
+model — it stops being out-of-sample the moment it's used that way, even
+though no single candidate was ever "trained" on it in the conventional
+sense. This section has been rewritten with a methodology that cannot leak
+the same way.
 
-The second lever tested was time-of-day. An exhaustive scan of every
-`(session_start_hour, session_end_hour)` pair (231 combinations, filtered to
-windows with at least 200 in-sample and 100 out-of-sample trades to avoid
-small-sample noise) shows the RSI(2)-in-trend edge is not uniform across the
-day — profit factor rises smoothly, not as an isolated spike, as the window
-narrows toward roughly 12:00-16:00 platform time and peaks around
-**14:00-16:00**:
+### The honest version: train → validate → test, test touched once
+
+1. **Train** (2012-05-15 → 2016-12-31) only: an exhaustive grid over every
+   session window with at least 150 signals (275 windows) crossed with stop
+   multiples 0.5-1.0x and target multiples 1.6-5.0x (reward:risk ≥ 1.5:1),
+   13,152 valid candidates. (`generate_signals()` doesn't depend on the
+   stop/target parameters, so it was computed once per session window and
+   reused across all 48 exit ratios for that window — this cut the slow part
+   of the grid from ~13,000 calls to 275 and made the full search tractable
+   in ~19 minutes instead of being impractically slow.)
+2. Candidates were filtered to `train_n ≥ 500` before ranking (11,656 of
+   13,152 qualify) — this excludes narrow 1-hour windows that top the raw
+   train-PF ranking on too few trades to trust.
+3. The top 15 candidates by train profit factor were each checked, once,
+   against **validate** (2017-2018), a window the train-only search never
+   saw. All 15 of 15 generalized with validate PF > 1.0 (range ≈1.23-1.53,
+   versus train PF range ≈1.84-1.90) — strong evidence the underlying
+   time-of-day effect is real, since pure noise would not be expected to
+   generalize this consistently across an independent window.
+4. The single best candidate by validate PF — **session 13:00-16:00, stop
+   0.5×ATR, target 4.5×ATR** — was locked in before any further data was
+   examined.
+5. The locked candidate was then evaluated against **test** (2019-2022),
+   touched exactly once:
 
 ```
-session 07:00-16:00 (full)  sl=1.0 tp=1.6  | IS PF=1.10  OOS PF=1.05
-session 12:00-16:00         sl=1.0 tp=1.6  | IS PF=1.13  OOS PF=1.06
-session 13:00-16:00         sl=1.0 tp=1.6  | IS PF=1.17  OOS PF=1.10
-session 14:00-16:00         sl=0.5 tp=4.0  | IS PF=1.65  OOS PF=1.51
+train    2012-16   sl=0.5 tp=4.5  | PF=1.86  n=963   win=21.7%  sharpe=2.37
+validate 2017-18   sl=0.5 tp=4.5  | PF=1.53  n=384   win=20.1%  sharpe=1.91
+test     2019-22   sl=0.5 tp=4.5  | PF=1.30  n=714   win=16.1%  sharpe=1.05
 ```
 
-A smooth gradient across a wide range of neighboring hour windows — rather
-than a single lucky cell surrounded by noise — is the main evidence this is a
-real time-of-day effect rather than a data-mined artifact: an overfit finding
-would typically look like an isolated spike, not a broad ridge. A plausible
-real-world mechanism is that 14:00-16:00 platform time overlaps major US
-economic data releases and the New York cash equity open, both of which tend
-to produce sharp, fast-reverting volatility spikes in gold — precisely the
-kind of move a short-term mean-reversion entry (RSI(2) extreme, snapping back
-toward the mean) is built to catch, and precisely the kind of move that other
-hours of the day (quiet Asian-session drift, slow-grinding London hours) do
-not reliably produce.
+Profit factor declines monotonically from train to validate to test — the
+pattern an honest, non-leaky search should produce, since some fitting to
+the train window is unavoidable. What matters is that validate and test both
+stay comfortably above 1.0, not that they match train. The mechanism
+hypothesis from the original pass is unchanged and still plausible: this
+window overlaps major US economic data releases and the New York cash
+equity open, both of which tend to produce sharp, fast-reverting volatility
+spikes in gold — the kind of move a short-term mean-reversion entry is built
+to catch.
 
-The two levers compound: exit-geometry alone tops out around PF 1.14-1.16,
-the time-of-day filter alone (at the original 1.0x/1.6x exit) reaches roughly
-1.10-1.17 depending on window width, but combining the narrow 14:00-16:00
-window with the wider 0.5x/4.0x exit reaches **PF 1.60 in-sample / 1.51
-out-of-sample** — confirmed independently in both windows, which is the
-relevant bar (see §3a's reasoning for why both-halves confirmation matters
-more than a single full-period number). Outlier and exit-reason sanity checks
-on this configuration (top-5 wins contribute ~2.3% of gross profit;
-exits are predominantly clean `stop_loss`/`take_profit`, not anomalous) rule
-out "PF driven by a few lucky trades" as an explanation.
+A few sanity checks on the locked configuration, full-period:
 
-The cost of this is large and is stated plainly rather than buried: win rate
-drops from ~40-45% (the §6 default) to **~20-23%**, and trade frequency drops
-from ~500/year to **~150/year**, because the window is now only 2 hours wide
-instead of 9. This is the explicit trade made to hit the requested profit
-factor — see `RESULTS.md` for the full before/after comparison and the
-honest discussion of what that trade costs in practice (including a
-23-trade losing streak observed in the full-period backtest, which is
-statistically unsurprising at a ~20% win rate but must be planned for, not
-treated as a sign of failure).
+- **Not outlier-driven**: the 5 largest winning trades are 4.0% of total
+  gross profit ($32,113 of $799,265) — up slightly from the 2.3% reported
+  for the original (leaky) config, but still far from "a few lucky trades
+  explain the result."
+- **Exit-reason mix is clean**: of 2,064 full-period trades, 1,662 exit via
+  `stop_loss`, 271 via `take_profit`, and 131 via `time_stop` — no sign of
+  degenerate behavior from the wide target or narrow session.
+- **Losing streaks are real and longer than originally reported**: the worst
+  run in the full-period backtest is **32 consecutive losing trades**, up
+  from the 23 reported for the original, leaky-selected config. Statistically
+  unsurprising at a ~20% win rate, but a genuinely worse number that the
+  original document understated.
+
+### What this changes versus the original (leaky) claim
+
+The honest, locked configuration's full-period profit factor is **1.41**
+(tight-ECN spread) / **1.10** (retail spread) — both real and positive, but
+lower than the originally-claimed 1.53 / 1.13. The more consequential change
+is at retail spread, out-of-sample only: the original version claimed this
+was "roughly breakeven" (PF 0.99); the honest redo shows it is **negative**
+(PF 0.91, −18.3% return over 2019-2022). See `RESULTS.md` for the full
+backtest-results table, the train/validate/test cascade in context, and the
+complete honest conclusion.
 
 ## 10. Honest summary
 
@@ -224,15 +245,30 @@ treated as a sign of failure).
   round-turn execution cost to be net positive when harvested with a
   symmetric or near-symmetric exit. This is a real constraint on how/where
   this strategy can be automated, not a cosmetic detail.
-- **Time-of-day concentrates the edge** (§9): the same signal is materially
-  stronger in a 14:00-16:00 platform-time window than across the full
-  session, confirmed independently in-sample and out-of-sample. Combined
-  with a wider reward:risk exit, this raises profit factor to ~1.5-1.6 and,
-  as a side effect, makes the system tolerate a standard retail spread
-  (PF > 1.0 full-period) for the first time — but at a much lower win rate
-  (~20-23%) and trade frequency (~150/year). See `RESULTS.md` for the full
-  cost-sensitivity table, the win-rate trade-off, and the live-trading
-  implications (including expected losing-streak length).
+- **A selection-bias flaw was found and fixed in this project's own process**
+  (§9): an earlier pass picked its session window by a criterion
+  (`min(IS_PF, OOS_PF)`) that used the out-of-sample window to choose among
+  thousands of candidates, which is itself a form of overfitting. The
+  redone search uses a leak-proof train (2012-16) → validate (2017-18) →
+  test (2019-22, touched once) cascade.
+- **Time-of-day still concentrates the edge, honestly confirmed**: the same
+  RSI(2)-in-trend signal is materially stronger in a 13:00-16:00
+  platform-time window than across the full session, with profit factor
+  declining monotonically and plausibly from train (1.86) to validate (1.53)
+  to a never-touched test set (1.30). Combined with a wider 9:1 reward:risk
+  exit, full-period profit factor reaches **1.41 (ECN) / 1.10 (retail)** —
+  real, but lower than the original (leaky) claim of 1.53-1.60.
+- **A genuinely new, sobering finding**: out-of-sample performance at a
+  standard retail spread is **negative** (PF 0.91, −18.3%), not "roughly
+  breakeven" as the original analysis claimed. A tight, ECN-grade spread is
+  closer to a requirement than a nice-to-have for this strategy going
+  forward.
+- **The win-rate/frequency trade-off is also worse than originally stated**:
+  win rate (~19-21%) and trade frequency (~150-200/year) are similar to
+  before, but the worst losing streak in the full-period backtest is 32
+  consecutive losses, up from the originally-reported 23. See `RESULTS.md`
+  for the full cost-sensitivity table, the win-rate trade-off, and the
+  live-trading implications.
 
 ## Reproducing this analysis
 
