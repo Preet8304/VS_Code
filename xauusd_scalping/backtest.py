@@ -39,10 +39,13 @@ class CostModel:
 @dataclass
 class RiskModel:
     initial_equity: float = 10_000.0
-    # 0.20% keeps full-period drawdown around -16% with the default atr_tp
-    # exit. Risk-per-trade is a pure position-sizing lever -- PF/win-rate are
-    # unaffected by it; only return and drawdown scale with it.
-    risk_per_trade: float = 0.002
+    # 0.30% keeps full-period drawdown around -16% with the default 14-16
+    # session / 0.5x-4.0x ATR atr_tp exit (that exit's own raw drawdown at
+    # 0.20% is only ~-11%, since the narrower session and tighter stop trade
+    # less often and lose less per loss). Risk-per-trade is a pure
+    # position-sizing lever -- PF/win-rate are unaffected by it; only return
+    # and drawdown scale with it.
+    risk_per_trade: float = 0.003
 
 
 @dataclass
