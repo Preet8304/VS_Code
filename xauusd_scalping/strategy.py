@@ -27,11 +27,18 @@ open, so there is no lookahead):
   3. Volatility filter (ATR percentile rank): skip dead and abnormally wild
      regimes.
   4. Session filter: trade only the liquid London/NY window.
-  5. Exit (see backtest.py): protective stop at `sl_atr_mult` x ATR, and -- in
-     the default `first_green` mode -- exit at the first bar that closes in
-     profit. That scratch exit is what lifts the win rate to ~65%+, but the
-     system is only net profitable on raw/ECN-grade spreads (the edge is real
-     yet smaller than a typical retail gold spread; see EDGE_ANALYSIS.md).
+  5. Exit (see backtest.py): protective stop at `sl_atr_mult` x ATR; default
+     target is a fixed `tp_atr_mult` x ATR (1.6x against a 1.0x stop). This is
+     a deliberate compromise: a tighter scratch exit (`first_green` mode)
+     pushes win rate to ~65%+ but caps the reward per trade at "barely
+     positive"; a wider fixed target lowers win rate to ~40-45% while raising
+     profit factor, Sharpe, and year-to-year consistency, because winners are
+     now let run to a real multiple of the stop instead of being scratched at
+     the first green close. See RESULTS.md for the side-by-side comparison.
+     Either way the system is only net profitable on raw/ECN-grade spreads
+     (the edge is real yet smaller than a typical retail gold spread; see
+     EDGE_ANALYSIS.md) -- the exit-mode choice changes win rate and
+     consistency, not the cost requirement.
 """
 from __future__ import annotations
 
@@ -55,12 +62,14 @@ class StrategyParams:
     atr_pct_high: float = 0.90
     session_start_hour: int = 7
     session_end_hour: int = 16
-    sl_atr_mult: float = 1.5
+    sl_atr_mult: float = 1.0
     max_holding_bars: int = 12
-    # Exit style: "first_green" (exit on first profitable close -> high win rate),
-    # "mean_tp" (target the SMA20 mid-band), or "atr_tp" (fixed ATR multiple).
-    exit_mode: str = "first_green"
-    tp_atr_mult: float = 1.0
+    # Exit style: "atr_tp" (fixed ATR-multiple target -- ~40-45% win rate,
+    # higher PF/Sharpe/consistency), "first_green" (exit on first profitable
+    # close -> ~65%+ win rate but a thinner edge per trade), or "mean_tp"
+    # (target the SMA20 mid-band). See RESULTS.md for the comparison.
+    exit_mode: str = "atr_tp"
+    tp_atr_mult: float = 1.6
     tp_min_atr_mult: float = 0.3
 
 

@@ -133,7 +133,23 @@ short: it lifts win rate to ~65-67% and moves the breakeven spread for the
 *full system* (not just the entry) to roughly $0.10-0.17/oz, which is what the
 final recommended cost assumption (`$0.10` ECN spread) is built around.
 
-## 7. Honest summary
+## 7. The exit rule is a separate decision from the edge itself
+
+Everything above (§1-6) is about the **entry signal** — it is the only place
+a real, cost-independent edge was found, and that finding does not change
+based on what exit rule is layered on top of it. The exit rule only decides
+how that raw edge gets converted into win rate, return smoothness, and
+drawdown. Two exits were backtested end-to-end on the *same* entry signal:
+scratching at the first profitable close (`first_green`, ~65%+ win rate, PF
+~1.06-1.07) versus a fixed 1.6×ATR target against a 1.0×ATR stop (`atr_tp`,
+~40-45% win rate, PF ~1.08-1.10, materially better Sharpe and year-to-year
+consistency). `atr_tp` is now the default in `strategy.py` — see `RESULTS.md`
+for the full side-by-side comparison and the reasoning. Neither exit changes
+the cost requirement from §5; both need the same tight/ECN-grade spread to be
+net positive, because that requirement comes from the entry signal's raw
+edge size, not from the exit.
+
+## 8. Honest summary
 
 - **Real edge exists**: RSI(2) mean-reversion, taken only in the direction of
   the H1 macro trend, has genuine positive raw expectancy (PF ≈ 1.09-1.14),

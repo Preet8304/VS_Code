@@ -39,10 +39,10 @@ class CostModel:
 @dataclass
 class RiskModel:
     initial_equity: float = 10_000.0
-    # 0.25% keeps drawdown in a survivable range (~12-16%) for live automation;
-    # 0.5% roughly doubles both return AND drawdown (PF/win-rate are unaffected,
-    # since this is a pure position-sizing lever, not a signal-quality one).
-    risk_per_trade: float = 0.0025
+    # 0.20% keeps full-period drawdown around -16% with the default atr_tp
+    # exit. Risk-per-trade is a pure position-sizing lever -- PF/win-rate are
+    # unaffected by it; only return and drawdown scale with it.
+    risk_per_trade: float = 0.002
 
 
 @dataclass
