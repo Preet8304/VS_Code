@@ -1,0 +1,6 @@
+trades,win_rate,profit_factor,avg_r,max_drawdown_pct,session
+0,0.0,inf,0.0,0.0,Asian
+0,0.0,inf,0.0,0.0,London
+2064,0.19428294573643412,1.4209704687202926,0.5366491953148859,-13.903844546464539,London+NY overlap
+0,0.0,inf,0.0,0.0,New York
+0,0.0,inf,0.0,0.0,Other
